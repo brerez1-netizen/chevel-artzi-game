@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>מי מושך את התוכנית</title>
+<style>
+  :root{ --ink:#1d2430; --muted:#6b7480; --paper:#f4f1ea; --line:#d8d2c6; --team:#1d2430; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--paper);
+    display:flex;flex-direction:column;
+  }
+  .screen{display:none;flex:1;min-height:0;flex-direction:column;padding:16px;gap:14px}
+  .screen.on{display:flex}
+
+  h1{margin:0;font-size:26px}
+  p.sub{margin:0;color:var(--muted);font-size:15px;line-height:1.5}
+  input{
+    font-family:inherit;font-size:19px;padding:13px;border-radius:11px;
+    border:1px solid var(--line);width:100%;background:#fff;color:var(--ink);
+  }
+  button{
+    font-family:inherit;font-size:18px;font-weight:700;padding:15px;border:none;
+    border-radius:12px;background:var(--ink);color:#fff;width:100%;cursor:pointer;
+  }
+  button:disabled{opacity:.4}
+  .avatars{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+  .av{background:#fff;border:3px solid var(--line);border-radius:12px;padding:5px;cursor:pointer}
+  .av.sel{border-color:var(--ink)}
+  .av img{width:100%;display:block}
+  .av span{display:block;text-align:center;font-size:11px;color:var(--muted);margin-top:2px}
+
+  .teamband{
+    background:var(--team);color:#fff;border-radius:12px;padding:13px 15px;
+  }
+  .teamband h2{margin:0;font-size:22px}
+  .teamband div{font-size:13px;opacity:.9;margin-top:3px;line-height:1.45}
+
+  .hud{display:flex;justify-content:space-between;align-items:center;font-size:15px;color:var(--muted)}
+  .hud b{font-size:20px;color:var(--ink)}
+  .hud b.team{color:var(--team)}
+
+  #mini{
+    position:relative;width:100%;height:152px;background:#fff;border:1px solid var(--line);
+    border-radius:12px;overflow:hidden;flex:none;
+  }
+  #mini .quad{position:absolute;width:50%;height:50%;opacity:.14}
+  #mini .quad.nw{top:0;left:0}#mini .quad.ne{top:0;right:0}
+  #mini .quad.sw{bottom:0;left:0}#mini .quad.se{bottom:0;right:0}
+  #mini .qlab{position:absolute;font-size:11px;font-weight:700}
+  #miniRopes{position:absolute;top:0;left:0;width:100%;height:100%}
+  #miniRing{
+    position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
+    border:4px solid #8a7350;background:radial-gradient(circle at 35% 30%,#fff8e6,#e6d4ad);z-index:3;
+  }
+  .qcard{
+    background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 15px;
+    text-align:center;
+  }
+  .qcard .kind{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .qcard .txt{font-size:22px;font-weight:700;line-height:1.4}
+  .qcard .txt.big{font-size:46px;letter-spacing:1px}
+  .opts{display:flex;flex-direction:column;gap:9px}
+  .opt{
+    background:#fff;border:2px solid var(--line);border-radius:12px;padding:14px 15px;
+    font-size:17px;line-height:1.35;text-align:right;cursor:pointer;
+  }
+  .opt:active{background:#efeae0}
+  .opt.right{border-color:#3f9d5a;background:#e9f5ec}
+  .opt.wrong{border-color:#b04a3d;background:#f8eae7}
+  .verdict{border-radius:12px;padding:14px;text-align:center;font-size:18px;font-weight:700}
+  .verdict.ok{background:#e9f5ec;color:#2c7a45}
+  .verdict.no{background:#f8eae7;color:#a8402f}
+  .verdict small{display:block;font-weight:600;font-size:15px;margin-top:5px;opacity:.9}
+  .stats{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:16px;line-height:1.7}
+  .center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center}
+</style>
+</head>
+<body>
+
+<section id="join" class="screen on">
+  <h1>מי מושך את התוכנית</h1>
+  <p class="sub">בחרו שם ודמות. השיוך לאחת מארבע הקבוצות נעשה אוטומטית, כדי שהקבוצות יצאו שוות בגודלן.</p>
+  <input id="name" placeholder="השם שלכם" maxlength="14" autocomplete="off">
+  <div class="avatars" id="avatars"></div>
+  <button id="joinBtn" disabled>הצטרפו למשחק</button>
+  <p class="sub" id="joinNote"></p>
+</section>
+
+<section id="wait" class="screen">
+  <div class="teamband" id="band1"></div>
+  <div class="center">
+    <div style="font-size:19px">מחכים שהמרצה יתחיל</div>
+    <p class="sub" id="waitNote">כל תשובה נכונה ומהירה שלכם מושכת את הטבעת לשטח הקבוצה.</p>
+  </div>
+  <button id="leaveBtn" style="background:#fff;color:var(--ink);border:1px solid var(--line)">החלפת שם או דמות</button>
+</section>
+
+<section id="quiz" class="screen">
+  <div class="hud">
+    <span>הקבוצה: <b class="team" id="hudTeam"></b></span>
+    <span>ניקוד: <b id="hudScore">0</b></span>
+    <span>זמן: <b id="hudClock">--:--</b></span>
+  </div>
+  <div id="mini">
+    <div class="quad nw"></div><div class="quad ne"></div>
+    <div class="quad sw"></div><div class="quad se"></div>
+    <svg id="miniRopes"></svg>
+    <div id="miniRing"></div>
+  </div>
+  <div class="qcard" id="qcard">
+    <div class="kind" id="qkind"></div>
+    <div class="txt" id="qtext"></div>
+  </div>
+  <div class="opts" id="opts"></div>
+  <div class="verdict" id="verdict" style="display:none"></div>
+</section>
+
+<section id="done" class="screen">
+  <div class="teamband" id="band2"></div>
+  <div class="center">
+    <h1 id="doneTitle">נגמר הזמן</h1>
+    <div class="stats" id="doneStats"></div>
+    <p class="sub">התוצאה הקבוצתית מוצגת על מסך המרצה.</p>
+  </div>
+</section>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="js/gameData.js"></script>
+<script>
+"use strict";
+var D = window.gameData, TEAMS = D.teams, SC = D.scoring;
+
+/* ---------- ממשק ההצטרפות נבנה לפני Firebase ---------- */
+var pickedAvatar = D.avatars[0].file;
+var elAvatars = document.getElementById('avatars');
+elAvatars.innerHTML = D.avatars.map(function(a, i){
+  return '<div class="av'+(i===0?' sel':'')+'" data-file="'+a.file+'">' +
+         '<img src="'+a.file+'" alt=""><span>'+a.label+'</span></div>';
+}).join('');
+elAvatars.addEventListener('click', function(e){
+  var av = e.target.closest ? e.target.closest('.av') : null;
+  if (!av) return;
+  Array.prototype.forEach.call(elAvatars.children, function(c){ c.classList.remove('sel'); });
+  av.classList.add('sel');
+  pickedAvatar = av.getAttribute('data-file');
+});
+var elName = document.getElementById('name');
+var elJoinBtn = document.getElementById('joinBtn');
+elName.addEventListener('input', function(){
+  elJoinBtn.disabled = elName.value.trim().length < 2;
+});
+
+/* ---------- Firebase ---------- */
+var firebaseConfig = {
+  apiKey: "AIzaSyAyE02oUmgIn2G6kkRWdNdqfrQi9rxEFC0",
+  authDomain: "erez-chevel-game.firebaseapp.com",
+  databaseURL: "https://erez-chevel-game-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "erez-chevel-game",
+  storageBucket: "erez-chevel-game.firebasestorage.app",
+  messagingSenderId: "299559856429",
+  appId: "1:299559856429:web:715fc939fbaf1c68758ba4"
+};
+var db = null, gameState = { state:'lobby' }, serverOffset = 0;
+var me = { id:null, team:null, name:'', score:0, correct:0, wrong:0 };
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  db.ref('.info/serverTimeOffset').on('value', function(s){ serverOffset = s.val() || 0; });
+  db.ref('game').on('value', function(s){
+    gameState = s.val() || { state:'lobby' };
+    onGame();
+  });
+} catch (e) {
+  console.error('Firebase לא עלה', e);
+  document.getElementById('joinNote').textContent = 'אין חיבור למסד הנתונים. בדקו את הרשת ורעננו.';
+}
+function now(){ return Date.now() + serverOffset; }
+
+/* ---------- הצטרפות ושיוך לקבוצה ---------- */
+/* השיוך נעשה בטרנזקציה על מונה משותף, ולא בהגרלה מקומית, אחרת
+   כמה טלפונים שנכנסים יחד היו יכולים ליפול כולם לאותה קבוצה. */
+function assignTeam(cb){
+  db.ref('teamCounts').transaction(function(cur){
+    var c = (cur && cur.c) ? cur.c.slice() : [0,0,0,0];
+    var min = Math.min.apply(null, c);
+    var candidates = [];
+    for (var i = 0; i < 4; i++) if (c[i] === min) candidates.push(i);
+    var pick = candidates[Math.floor(Math.random()*candidates.length)];
+    c[pick]++;
+    return { c: c, last: pick };
+  }, function(err, committed, snap){
+    if (err || !committed || !snap.val()) { cb(Math.floor(Math.random()*4)); return; }
+    cb(snap.val().last);
+  });
+}
+elJoinBtn.onclick = function(){
+  if (!db) return;
+  elJoinBtn.disabled = true;
+  var name = elName.value.trim();
+  assignTeam(function(team){
+    var ref = db.ref('players').push();
+    me.id = ref.key; me.team = team; me.name = name;
+    me.score = 0; me.correct = 0; me.wrong = 0;
+    ref.set({ name:name, team:team, avatar:pickedAvatar, score:0, correct:0, wrong:0, joinedAt: now() });
+    try {
+      localStorage.setItem('chevel.me', JSON.stringify({ id:me.id, team:team, name:name, avatar:pickedAvatar }));
+    } catch(e){}
+    watchMe();
+    paintTeam();
+    onGame();
+  });
+};
+document.getElementById('leaveBtn').onclick = function(){
+  if (db && me.id) db.ref('players/'+me.id).remove();
+  try { localStorage.removeItem('chevel.me'); } catch(e){}
+  me = { id:null, team:null, name:'', score:0, correct:0, wrong:0 };
+  elJoinBtn.disabled = elName.value.trim().length < 2;
+  show('join');
+};
+
+/* חזרה אחרי רענון דף */
+(function restore(){
+  var raw = null;
+  try { raw = localStorage.getItem('chevel.me'); } catch(e){}
+  if (!raw || !db) return;
+  var saved;
+  try { saved = JSON.parse(raw); } catch(e){ return; }
+  if (!saved || !saved.id) return;
+  db.ref('players/'+saved.id).once('value', function(s){
+    if (!s.exists()) { try{ localStorage.removeItem('chevel.me'); }catch(e){} return; }
+    var v = s.val();
+    me.id = saved.id; me.team = v.team; me.name = v.name;
+    me.score = v.score||0; me.correct = v.correct||0; me.wrong = v.wrong||0;
+    pickedAvatar = v.avatar || pickedAvatar;
+    watchMe();
+    paintTeam();
+    onGame();
+  });
+})();
+
+function watchMe(){
+  /* המרצה מאפס ניקוד בתחילת סבב, ולכן צריך להקשיב לצומת שלי */
+  db.ref('players/'+me.id).on('value', function(s){
+    var v = s.val();
+    if (!v) return;
+    if ((v.score||0) === 0 && me.score !== 0 && gameState.state !== 'running'){
+      me.score = 0; me.correct = 0; me.wrong = 0;
+    }
+    document.getElementById('hudScore').textContent = me.score;
+  });
+}
+function paintTeam(){
+  if (me.team === null) return;
+  var t = TEAMS[me.team];
+  document.documentElement.style.setProperty('--team', t.color);
+  var html = '<h2>'+t.name+'</h2><div>'+t.blurb+'</div>';
+  document.getElementById('band1').innerHTML = html;
+  document.getElementById('band2').innerHTML = html;
+  document.getElementById('hudTeam').textContent = t.short;
+}
+
+/* ---------- תצוגת החבל המוקטנת בטלפון ---------- */
+/* אותה פיזיקה של מסך המרצה, כדי שהשחקן יראה את התשובה שלו מזיזה את הטבעת */
+var MCORNER = { nw:[13,24], ne:[87,24], sw:[13,78], se:[87,78] };
+var PH = D.physics;
+var elMini = document.getElementById('mini');
+var elMiniRopes = document.getElementById('miniRopes');
+var elMiniRing = document.getElementById('miniRing');
+var allPlayers = {};
+var mRingPos = [50,50], mRingGoal = [50,50];
+
+TEAMS.forEach(function(t){
+  var q = elMini.querySelector('.quad.'+t.corner);
+  if (q) q.style.background = t.color;
+  var c = MCORNER[t.corner];
+  var lab = document.createElement('div');
+  lab.className = 'qlab'; lab.textContent = t.short; lab.style.color = t.color;
+  lab.style.top    = (c[1] > 50 ? 'auto' : '6px');
+  lab.style.bottom = (c[1] > 50 ? '6px' : 'auto');
+  lab.style.right  = (c[0] > 50 ? '9px' : 'auto');
+  lab.style.left   = (c[0] > 50 ? 'auto' : '9px');
+  elMini.appendChild(lab);
+});
+
+function mDir(corner){
+  var c = MCORNER[corner], dx = c[0]-50, dy = c[1]-50, m = Math.hypot(dx,dy) || 1;
+  return [dx/m, dy/m];
+}
+function miniGoal(){
+  var list = Object.keys(allPlayers).map(function(k){ return allPlayers[k]; })
+    .filter(function(p){ return p && typeof p.team === 'number' && TEAMS[p.team]; });
+  var vx = 0, vy = 0, total = 0;
+  TEAMS.forEach(function(t){
+    var mine = list.filter(function(p){ return p.team === t.id; });
+    var pull = mine.length ? mine.reduce(function(a,p){ return a + (p.score||0); }, 0) / mine.length : 0;
+    var d = mDir(t.corner);
+    vx += pull*d[0]; vy += pull*d[1]; total += pull;
+  });
+  var denom = total + PH.friction, k = PH.maxRadius*100;
+  return [ 50 + (vx/denom)*k, 50 + (vy/denom)*k ];
+}
+function miniFrame(){
+  mRingPos[0] += (mRingGoal[0]-mRingPos[0]) * PH.ease;
+  mRingPos[1] += (mRingGoal[1]-mRingPos[1]) * PH.ease;
+  elMiniRing.style.left = mRingPos[0]+'%';
+  elMiniRing.style.top  = mRingPos[1]+'%';
+  elMiniRopes.innerHTML =
+    TEAMS.map(function(t){
+      var c = MCORNER[t.corner];
+      return '<line x1="'+c[0]+'%" y1="'+c[1]+'%" x2="'+mRingPos[0]+'%" y2="'+mRingPos[1]+'%" ' +
+             'stroke="'+t.color+'" stroke-width="4" stroke-linecap="round" opacity="0.85"/>';
+    }).join('') +
+    TEAMS.map(function(t){
+      var c = MCORNER[t.corner];
+      return '<circle cx="'+c[0]+'%" cy="'+c[1]+'%" r="7" fill="'+t.color+'" stroke="#fff" stroke-width="3"/>';
+    }).join('');
+  requestAnimationFrame(miniFrame);
+}
+miniFrame();
+if (db) db.ref('players').on('value', function(s){
+  allPlayers = s.val() || {};
+  mRingGoal = miniGoal();
+});
+
+/* ---------- תור השאלות, מעורבב אחרת לכל שחקן ---------- */
+var queue = [], qi = 0, current = null, shownAt = 0, locked = false;
+function reshuffle(){
+  queue = D.questions.map(function(_, i){ return i; });
+  for (var i = queue.length-1; i > 0; i--){
+    var j = Math.floor(Math.random()*(i+1));
+    var tmp = queue[i]; queue[i] = queue[j]; queue[j] = tmp;
+  }
+  qi = 0;
+}
+function nextQuestion(){
+  if (!queue.length || qi >= queue.length) reshuffle();
+  current = D.questions[queue[qi++]];
+  locked = false;
+  document.getElementById('verdict').style.display = 'none';
+  document.getElementById('qkind').textContent =
+    current.kind === 'acronym' ? 'מה משמעות ראשי התיבות?' : 'שאלה';
+  var txt = document.getElementById('qtext');
+  txt.textContent = current.q;
+  txt.className = 'txt' + (current.kind === 'acronym' ? ' big' : '');
+
+  var opts = document.getElementById('opts');
+  opts.innerHTML = current.options.map(function(o, i){
+    return '<div class="opt" data-i="'+i+'">'+o+'</div>';
+  }).join('');
+  shownAt = Date.now();
+}
+document.getElementById('opts').addEventListener('click', function(e){
+  var el = e.target.closest ? e.target.closest('.opt') : null;
+  if (!el || locked || !current || gameState.state !== 'running') return;
+  locked = true;
+  var chosen = parseInt(el.getAttribute('data-i'), 10);
+  var ok = chosen === current.correct;
+  var elapsed = (Date.now() - shownAt) / 1000;
+  var pts = ok ? SC.base + Math.round(SC.bonus * Math.exp(-SC.decay * elapsed)) : 0;
+
+  Array.prototype.forEach.call(this.children, function(c){
+    var i = parseInt(c.getAttribute('data-i'), 10);
+    if (i === current.correct) c.classList.add('right');
+    else if (i === chosen) c.classList.add('wrong');
+  });
+
+  if (ok){ me.score += pts; me.correct++; } else { me.wrong++; }
+  document.getElementById('hudScore').textContent = me.score;
+
+  if (db && me.id){
+    db.ref('players/'+me.id).update({
+      score: me.score, correct: me.correct, wrong: me.wrong,
+      lastAt: now(), lastOk: ok, lastPts: pts, lastQ: current.q
+    });
+  }
+
+  var v = document.getElementById('verdict');
+  v.style.display = 'block';
+  if (ok){
+    v.className = 'verdict ok';
+    v.innerHTML = 'נכון, ' + pts + ' נקודות<small>החבל נמשך לכיוון שלכם</small>';
+    setTimeout(function(){ if (gameState.state === 'running') nextQuestion(); }, 750);
+  } else {
+    v.className = 'verdict no';
+    v.innerHTML = 'לא נכון<small>' + current.options[current.correct] + '</small>';
+    setTimeout(function(){ if (gameState.state === 'running') nextQuestion(); }, D.lockoutMs);
+  }
+});
+
+/* ---------- מצב המשחק ---------- */
+function show(id){
+  ['join','wait','quiz','done'].forEach(function(s){
+    document.getElementById(s).classList.toggle('on', s === id);
+  });
+}
+var wasRunning = false;
+function onGame(){
+  if (me.id === null){ show('join'); return; }
+  if (gameState.state === 'running'){
+    if (!wasRunning){
+      wasRunning = true;
+      me.score = 0; me.correct = 0; me.wrong = 0;
+      document.getElementById('hudScore').textContent = '0';
+      mRingPos = [50,50]; mRingGoal = [50,50];
+      reshuffle();
+      nextQuestion();
+    }
+    show('quiz');
+  } else if (gameState.state === 'finished'){
+    wasRunning = false;
+    document.getElementById('doneStats').innerHTML =
+      'ניקוד: <b>' + me.score + '</b><br>' +
+      'תשובות נכונות: <b>' + me.correct + '</b><br>' +
+      'טעויות: <b>' + me.wrong + '</b>';
+    show('done');
+  } else {
+    wasRunning = false;
+    show('wait');
+  }
+}
+setInterval(function(){
+  if (gameState.state !== 'running' || !gameState.endsAt) return;
+  var left = Math.max(0, Math.round((gameState.endsAt - now())/1000));
+  document.getElementById('hudClock').textContent =
+    String(Math.floor(left/60)).padStart(2,'0') + ':' + String(left%60).padStart(2,'0');
+}, 400);
+</script>
+</body>
+</html>

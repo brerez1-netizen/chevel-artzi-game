@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>מי מושך את התוכנית - תרגול אישי</title>
+<style>
+  :root{ --ink:#1d2430; --muted:#6b7480; --paper:#f4f1ea; --line:#d8d2c6; --team:#2f6fd0; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%}
+  body{
+    font-family:"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--paper);
+    max-width:560px;margin:0 auto;padding:16px;
+  }
+  .screen{display:none;flex-direction:column;gap:13px}
+  .screen.on{display:flex}
+  h1{margin:0;font-size:26px}
+  p.sub{margin:0;color:var(--muted);font-size:15px;line-height:1.55}
+  button{
+    font-family:inherit;font-size:18px;font-weight:700;padding:15px;border:none;
+    border-radius:12px;background:var(--ink);color:#fff;width:100%;cursor:pointer;
+  }
+  button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+
+  #field{
+    position:relative;width:100%;aspect-ratio:1/1;background:#fff;border:1px solid var(--line);
+    border-radius:14px;overflow:hidden;
+  }
+  .quad{position:absolute;width:50%;height:50%;opacity:.13}
+  .quad.nw{top:0;left:0}.quad.ne{top:0;right:0}.quad.sw{bottom:0;left:0}.quad.se{bottom:0;right:0}
+  .qlab{position:absolute;font-size:12px;font-weight:700}
+  #ropes{position:absolute;top:0;left:0;width:100%;height:100%}
+  #ring{
+    position:absolute;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;
+    border:5px solid #8a7350;background:radial-gradient(circle at 35% 30%,#fff8e6,#e6d4ad);z-index:3;
+  }
+  #mypawn{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;z-index:4}
+  #mypawn img{width:100%;border-radius:50%;border:3px solid var(--team);background:#fff;display:block}
+
+  .hud{display:flex;justify-content:space-between;font-size:15px;color:var(--muted)}
+  .hud b{font-size:20px;color:var(--ink)}
+  .qcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;text-align:center}
+  .qcard .kind{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .qcard .txt{font-size:21px;font-weight:700;line-height:1.4}
+  .qcard .txt.big{font-size:42px}
+  .opts{display:flex;flex-direction:column;gap:9px}
+  .opt{background:#fff;border:2px solid var(--line);border-radius:12px;padding:13px 15px;font-size:17px;text-align:right;cursor:pointer}
+  .opt.right{border-color:#3f9d5a;background:#e9f5ec}
+  .opt.wrong{border-color:#b04a3d;background:#f8eae7}
+  .verdict{border-radius:12px;padding:12px;text-align:center;font-size:17px;font-weight:700}
+  .verdict.ok{background:#e9f5ec;color:#2c7a45}
+  .verdict.no{background:#f8eae7;color:#a8402f}
+  .verdict small{display:block;font-weight:600;font-size:15px;margin-top:4px}
+  .stats{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:16px;line-height:1.8}
+  .misses{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.6}
+  .misses b{display:block;margin-bottom:5px;font-size:15px}
+</style>
+</head>
+<body>
+
+<section id="intro" class="screen on">
+  <h1>מי מושך את התוכנית</h1>
+  <p class="sub">גרסת תרגול אישית. אתם מייצגים את הממשלה, ומולכם שלוש קבוצות שמושכות בקצב קבוע. יש לכם ארבע דקות למשוך את הטבעת לפינה שלכם. תשובה שגויה עולה שלוש שניות של המתנה.</p>
+  <div id="best" class="stats" style="display:none"></div>
+  <button id="startBtn">התחילו</button>
+</section>
+
+<section id="play" class="screen">
+  <div class="hud">
+    <span>ניקוד: <b id="score">0</b></span>
+    <span>נכונות: <b id="ok">0</b></span>
+    <span>זמן: <b id="clock">04:00</b></span>
+  </div>
+  <div id="field">
+    <div class="quad nw"></div><div class="quad ne"></div>
+    <div class="quad sw"></div><div class="quad se"></div>
+    <svg id="ropes"></svg>
+    <div id="ring"></div>
+    <div id="mypawn"><img alt=""></div>
+  </div>
+  <div class="qcard">
+    <div class="kind" id="qkind"></div>
+    <div class="txt" id="qtext"></div>
+  </div>
+  <div class="opts" id="opts"></div>
+  <div class="verdict" id="verdict" style="display:none"></div>
+</section>
+
+<section id="done" class="screen">
+  <h1 id="doneTitle"></h1>
+  <div class="stats" id="doneStats"></div>
+  <div class="misses" id="doneMisses" style="display:none"></div>
+  <button id="againBtn">סיבוב נוסף</button>
+</section>
+
+<script src="js/gameData.js"></script>
+<script>
+"use strict";
+var D = window.gameData, TEAMS = D.teams, SC = D.scoring, PH = D.physics;
+var DURATION = 240;
+/* קצב המשיכה של שלוש היריבות בנקודות לשנייה. אתם צריכים בערך תשובה נכונה
+   כל תשע שניות כדי לגבור על החזקה שבהן. */
+var BOT_RATE = { 1: 9, 2: 13, 3: 17 };
+var MY_TEAM = 0;
+
+var CORNER = { nw:[17,20], ne:[83,20], sw:[17,83], se:[83,83] };
+function dirOf(c){ var p=CORNER[c],dx=p[0]-50,dy=p[1]-50,m=Math.hypot(dx,dy)||1; return [dx/m,dy/m]; }
+
+var elField = document.getElementById('field');
+var elRing = document.getElementById('ring');
+var elRopes = document.getElementById('ropes');
+var elPawn = document.getElementById('mypawn');
+
+TEAMS.forEach(function(t){
+  var q = elField.querySelector('.quad.'+t.corner);
+  if (q) q.style.background = t.color;
+  var c = CORNER[t.corner];
+  var lab = document.createElement('div');
+  lab.className = 'qlab'; lab.textContent = t.short; lab.style.color = t.color;
+  lab.style.top    = (c[1] > 50 ? 'auto' : '8px');
+  lab.style.bottom = (c[1] > 50 ? '8px' : 'auto');
+  lab.style.right  = (c[0] > 50 ? '10px' : 'auto');
+  lab.style.left   = (c[0] > 50 ? 'auto' : '10px');
+  elField.appendChild(lab);
+});
+document.documentElement.style.setProperty('--team', TEAMS[MY_TEAM].color);
+elPawn.querySelector('img').src = D.avatars[0].file;
+
+var state = null, ringPos = [50,50], ringGoal = [50,50];
+
+function pulls(){
+  var p = [0,0,0,0];
+  p[MY_TEAM] = state ? state.score : 0;
+  var secs = state ? (DURATION - state.left) : 0;
+  for (var i=1;i<4;i++) p[i] = Math.round(BOT_RATE[i] * secs);
+  return p;
+}
+function computeGoal(){
+  var p = pulls(), vx=0, vy=0, total=0;
+  TEAMS.forEach(function(t,i){
+    var d = dirOf(t.corner);
+    vx += p[i]*d[0]; vy += p[i]*d[1]; total += p[i];
+  });
+  var denom = total + PH.friction, k = PH.maxRadius*100;
+  return [ 50 + (vx/denom)*k, 50 + (vy/denom)*k ];
+}
+function quadrantOf(pos){
+  var dx=pos[0]-50, dy=pos[1]-50;
+  if (Math.hypot(dx,dy) < PH.centerZone*100) return null;
+  var corner = (dy<0?'n':'s') + (dx>0?'e':'w');
+  return TEAMS.filter(function(t){ return t.corner===corner; })[0] || null;
+}
+function frame(){
+  ringPos[0] += (ringGoal[0]-ringPos[0]) * PH.ease;
+  ringPos[1] += (ringGoal[1]-ringPos[1]) * PH.ease;
+  elRing.style.left = ringPos[0]+'%';
+  elRing.style.top  = ringPos[1]+'%';
+  elRopes.innerHTML =
+    TEAMS.map(function(t){
+      var c = CORNER[t.corner];
+      return '<line x1="'+c[0]+'%" y1="'+c[1]+'%" x2="'+ringPos[0]+'%" y2="'+ringPos[1]+'%" ' +
+             'stroke="'+t.color+'" stroke-width="4" stroke-linecap="round" opacity="0.8"/>';
+    }).join('') +
+    TEAMS.map(function(t){
+      var c = CORNER[t.corner];
+      return '<circle cx="'+c[0]+'%" cy="'+c[1]+'%" r="8" fill="'+t.color+'" stroke="#fff" stroke-width="3"/>';
+    }).join('');
+  var c = CORNER[TEAMS[MY_TEAM].corner];
+  elPawn.style.left = (c[0] + (ringPos[0]-c[0])*0.62) + '%';
+  elPawn.style.top  = (c[1] + (ringPos[1]-c[1])*0.62) + '%';
+  requestAnimationFrame(frame);
+}
+frame();
+
+/* ---------- שאלות ---------- */
+function shuffled(){
+  var a = D.questions.map(function(_,i){ return i; });
+  for (var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
+function nextQuestion(){
+  if (state.qi >= state.queue.length){ state.queue = shuffled(); state.qi = 0; }
+  state.current = D.questions[state.queue[state.qi++]];
+  state.locked = false;
+  document.getElementById('verdict').style.display = 'none';
+  document.getElementById('qkind').textContent =
+    state.current.kind === 'acronym' ? 'מה משמעות ראשי התיבות?' : 'שאלה';
+  var txt = document.getElementById('qtext');
+  txt.textContent = state.current.q;
+  txt.className = 'txt' + (state.current.kind === 'acronym' ? ' big' : '');
+  document.getElementById('opts').innerHTML = state.current.options.map(function(o,i){
+    return '<div class="opt" data-i="'+i+'">'+o+'</div>';
+  }).join('');
+  state.shownAt = Date.now();
+}
+document.getElementById('opts').addEventListener('click', function(e){
+  var el = e.target.closest ? e.target.closest('.opt') : null;
+  if (!el || !state || state.locked || state.over) return;
+  state.locked = true;
+  var chosen = parseInt(el.getAttribute('data-i'),10);
+  var cur = state.current;
+  var ok = chosen === cur.correct;
+  var pts = ok ? SC.base + Math.round(SC.bonus * Math.exp(-SC.decay * (Date.now()-state.shownAt)/1000)) : 0;
+
+  Array.prototype.forEach.call(this.children, function(c){
+    var i = parseInt(c.getAttribute('data-i'),10);
+    if (i === cur.correct) c.classList.add('right');
+    else if (i === chosen) c.classList.add('wrong');
+  });
+
+  var v = document.getElementById('verdict');
+  v.style.display = 'block';
+  if (ok){
+    state.score += pts; state.ok++;
+    v.className = 'verdict ok';
+    v.innerHTML = 'נכון, ' + pts + ' נקודות';
+    setTimeout(function(){ if (!state.over) nextQuestion(); }, 700);
+  } else {
+    state.wrong++;
+    state.misses.push(cur.q + ' - ' + cur.options[cur.correct]);
+    v.className = 'verdict no';
+    v.innerHTML = 'לא נכון<small>' + cur.options[cur.correct] + '</small>';
+    setTimeout(function(){ if (!state.over) nextQuestion(); }, D.lockoutMs);
+  }
+  document.getElementById('score').textContent = state.score;
+  document.getElementById('ok').textContent = state.ok;
+});
+
+/* ---------- מהלך הסיבוב ---------- */
+function show(id){
+  ['intro','play','done'].forEach(function(s){
+    document.getElementById(s).classList.toggle('on', s===id);
+  });
+}
+function tick(){
+  if (!state || state.over) return;
+  state.left--;
+  var el = document.getElementById('clock');
+  el.textContent = String(Math.floor(state.left/60)).padStart(2,'0') + ':' + String(state.left%60).padStart(2,'0');
+  ringGoal = computeGoal();
+  if (state.left <= 0) finish();
+}
+function finish(){
+  state.over = true;
+  clearInterval(state.timer);
+  ringGoal = computeGoal();
+  var q = quadrantOf(ringGoal);
+  var won = q && q.id === MY_TEAM;
+  document.getElementById('doneTitle').textContent = won ? 'הטבעת אצלכם' : 'הטבעת לא הגיעה אליכם';
+  var p = pulls();
+  document.getElementById('doneStats').innerHTML =
+    'ניקוד: <b>' + state.score + '</b><br>' +
+    'תשובות נכונות: <b>' + state.ok + '</b><br>' +
+    'טעויות: <b>' + state.wrong + '</b><br>' +
+    'הטבעת נעצרה ' + (q ? 'בשטח ' + q.name : 'במרכז') + '<br>' +
+    'משיכות היריבות: ' + TEAMS.slice(1).map(function(t,i){ return t.short + ' ' + p[i+1]; }).join(' · ');
+
+  if (state.misses.length){
+    document.getElementById('doneMisses').style.display = 'block';
+    document.getElementById('doneMisses').innerHTML =
+      '<b>מה שכדאי לחזור עליו</b>' + state.misses.slice(0,10).join('<br>');
+  } else {
+    document.getElementById('doneMisses').style.display = 'none';
+  }
+
+  try {
+    var prev = parseInt(localStorage.getItem('chevel.solo.best') || '0', 10);
+    if (state.score > prev) localStorage.setItem('chevel.solo.best', String(state.score));
+  } catch(e){}
+  show('done');
+}
+function start(){
+  state = { score:0, ok:0, wrong:0, left:DURATION, queue:shuffled(), qi:0,
+            current:null, shownAt:0, locked:false, over:false, misses:[] };
+  ringPos = [50,50]; ringGoal = [50,50];
+  document.getElementById('score').textContent = '0';
+  document.getElementById('ok').textContent = '0';
+  document.getElementById('clock').textContent = '04:00';
+  nextQuestion();
+  show('play');
+  state.timer = setInterval(tick, 1000);
+}
+document.getElementById('startBtn').onclick = start;
+document.getElementById('againBtn').onclick = start;
+
+(function showBest(){
+  var b = 0;
+  try { b = parseInt(localStorage.getItem('chevel.solo.best') || '0', 10); } catch(e){}
+  if (b > 0){
+    var el = document.getElementById('best');
+    el.style.display = 'block';
+    el.innerHTML = 'השיא האישי שלכם: <b>' + b + '</b> נקודות';
+  }
+})();
+</script>
+</body>
+</html>

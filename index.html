@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>מי מושך את התוכנית - מסך המרצה</title>
+<style>
+  :root{ --ink:#1d2430; --muted:#6b7480; --paper:#f4f1ea; --line:#d8d2c6; }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--paper);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .screen{display:none;flex:1;min-height:0}
+  .screen.on{display:flex;flex-direction:column}
+
+  /* ---------- לובי ---------- */
+  #lobby{align-items:center;justify-content:center;gap:26px;padding:30px}
+  #lobby h1{margin:0;font-size:44px;letter-spacing:-.5px}
+  #lobby .sub{margin:0;color:var(--muted);font-size:19px;max-width:780px;text-align:center;line-height:1.5}
+  .joinbox{display:flex;gap:34px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .qrcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;text-align:center}
+  .qrcard canvas{display:block;width:220px;height:220px}
+  .qrcard .url{margin-top:10px;font-size:14px;color:var(--muted);direction:ltr}
+  .teamgrid{display:grid;grid-template-columns:repeat(2,minmax(215px,1fr));gap:12px}
+  .teamcard{border-radius:12px;padding:12px 14px;color:#fff;min-height:106px}
+  .teamcard h3{margin:0 0 4px;font-size:19px}
+  .teamcard .cnt{font-size:13px;opacity:.85}
+  .teamcard .names{margin-top:6px;font-size:14px;line-height:1.45;opacity:.96}
+  .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center}
+  button{
+    font-family:inherit;font-size:17px;font-weight:600;padding:11px 26px;border:none;
+    border-radius:10px;background:#1d2430;color:#fff;cursor:pointer;
+  }
+  button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  button:disabled{opacity:.4;cursor:default}
+  select{font-family:inherit;font-size:16px;padding:10px;border-radius:10px;border:1px solid var(--line);background:#fff}
+
+  /* ---------- זירה ---------- */
+  #arena{padding:14px 18px 18px;gap:10px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .clock{font-size:40px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:1px}
+  .clock.low{color:#c0392b}
+  .lead{font-size:19px;color:var(--muted)}
+  .fieldwrap{flex:1;min-height:0;display:flex;gap:14px}
+  #field{
+    position:relative;flex:1;min-width:0;border-radius:16px;overflow:hidden;
+    border:1px solid var(--line);background:#fff;
+  }
+  .quad{position:absolute;width:50%;height:50%;opacity:.13}
+  .quad.nw{top:0;left:0}
+  .quad.ne{top:0;right:0}
+  .quad.sw{bottom:0;left:0}
+  .quad.se{bottom:0;right:0}
+  .quadlabel{position:absolute;font-size:20px;font-weight:700;opacity:.9;max-width:33%}
+  .quadlabel .n{font-size:13px;font-weight:600;opacity:.72;display:block;line-height:1.4;margin-top:3px}
+  #ropes{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+  #ring{
+    position:absolute;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:50%;
+    border:9px solid #8a7350;background:radial-gradient(circle at 35% 30%,#fff8e6,#e6d4ad);
+    box-shadow:0 6px 18px rgba(0,0,0,.22);z-index:5;
+  }
+  .pawn{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;z-index:4}
+  .pawn img{width:100%;height:100%;border-radius:50%;display:block;border:3px solid #fff;background:#fff}
+  .pawn .nm{
+    position:absolute;top:100%;right:50%;transform:translateX(50%);white-space:nowrap;
+    font-size:11px;font-weight:700;background:#fff;border-radius:7px;padding:1px 6px;
+    box-shadow:0 1px 4px rgba(0,0,0,.18);
+  }
+  .sidebar{width:268px;display:flex;flex-direction:column;gap:10px}
+  .pullcard{border-radius:11px;padding:9px 11px;color:#fff}
+  .pullcard .row{display:flex;justify-content:space-between;align-items:baseline;font-size:16px;font-weight:700}
+  .pullcard .bar{height:8px;border-radius:4px;background:rgba(0,0,0,.26);margin-top:6px;overflow:hidden}
+  .pullcard .bar i{display:block;height:100%;background:#fff;width:0;transition:width .4s ease}
+  .pullcard .meta{font-size:12px;opacity:.88;margin-top:3px}
+  .feed{
+    flex:1;min-height:0;overflow:hidden;background:#fff;border:1px solid var(--line);
+    border-radius:11px;padding:9px 11px;font-size:14px;line-height:1.55;
+  }
+  .feed .miss{color:#b04a3d}
+
+  /* ---------- סיום ---------- */
+  #final{align-items:center;justify-content:center;gap:18px;padding:30px;text-align:center;overflow:auto}
+  #final h1{margin:0;font-size:50px}
+  #final .win{font-size:24px;color:var(--muted)}
+  table{border-collapse:collapse;font-size:17px;background:#fff}
+  th,td{border:1px solid var(--line);padding:7px 15px;text-align:right}
+  th{background:#eee9df}
+  .medal{font-size:19px}
+</style>
+</head>
+<body>
+
+<section id="lobby" class="screen on">
+  <h1>מי מושך את התוכנית</h1>
+  <p class="sub">ארבעה אינטרסים מושכים את מערכת התכנון הארצית לכיוונים מנוגדים. כל תשובה נכונה ומהירה מושכת את הטבעת לשטח הקבוצה שלכם. הקבוצה שהטבעת בשטחה כשנגמר הזמן מנצחת.</p>
+  <div class="joinbox">
+    <div class="qrcard">
+      <canvas id="qr"></canvas>
+      <div class="url" id="qrurl"></div>
+    </div>
+    <div class="teamgrid" id="teamgrid"></div>
+  </div>
+  <div class="controls">
+    <select id="dur">
+      <option value="360">6 דקות</option>
+      <option value="480" selected>8 דקות</option>
+      <option value="600">10 דקות</option>
+    </select>
+    <button id="startBtn" disabled>התחילו את המשחק</button>
+    <button id="resetBtn" class="ghost">איפוס מלא</button>
+  </div>
+</section>
+
+<section id="arena" class="screen">
+  <div class="topbar">
+    <div class="clock" id="clock">08:00</div>
+    <div class="lead" id="lead"></div>
+    <button id="stopBtn" class="ghost">סיום מוקדם</button>
+  </div>
+  <div class="fieldwrap">
+    <div id="field">
+      <div class="quad nw"></div><div class="quad ne"></div>
+      <div class="quad sw"></div><div class="quad se"></div>
+      <svg id="ropes"></svg>
+      <div id="ring"></div>
+    </div>
+    <div class="sidebar">
+      <div id="pulls"></div>
+      <div class="feed" id="feed"></div>
+    </div>
+  </div>
+</section>
+
+<section id="final" class="screen">
+  <h1 id="winTitle"></h1>
+  <div class="win" id="winSub"></div>
+  <table id="finalTeams"></table>
+  <table id="finalPlayers"></table>
+  <button id="againBtn" class="ghost">חזרה ללובי</button>
+</section>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script src="js/gameData.js"></script>
+<script>
+"use strict";
+var D = window.gameData;
+var TEAMS = D.teams, PH = D.physics;
+
+/* מיקום ארבע הפינות בלוח באחוזים, ומהן וקטור הכיוון המנורמל שיוצא מהמרכז */
+var CORNER = { nw:[16,20], ne:[84,20], sw:[16,84], se:[84,84] };
+function dirOf(corner){
+  var c = CORNER[corner], dx = c[0]-50, dy = c[1]-50;
+  var m = Math.hypot(dx,dy) || 1;
+  return [dx/m, dy/m];
+}
+
+/* אתחול הממשק קודם, כדי ששגיאת רשת ב-Firebase לא תשתק את כל המסך */
+var elTeamGrid = document.getElementById('teamgrid');
+var elPulls = document.getElementById('pulls');
+var elField = document.getElementById('field');
+var elRing = document.getElementById('ring');
+var elRopes = document.getElementById('ropes');
+var elFeed = document.getElementById('feed');
+
+function buildLobbyCards(){
+  elTeamGrid.innerHTML = TEAMS.map(function(t){
+    return '<div class="teamcard" style="background:'+t.color+'">' +
+      '<h3>'+t.name+'</h3>' +
+      '<div class="cnt" id="cnt'+t.id+'">0 שחקנים</div>' +
+      '<div class="names" id="nms'+t.id+'"></div></div>';
+  }).join('');
+}
+function buildPullCards(){
+  elPulls.innerHTML = TEAMS.map(function(t){
+    return '<div class="pullcard" style="background:'+t.color+'">' +
+      '<div class="row"><span>'+t.short+'</span><span id="pp'+t.id+'">0</span></div>' +
+      '<div class="bar"><i id="pb'+t.id+'"></i></div>' +
+      '<div class="meta" id="pm'+t.id+'">0 שחקנים</div></div>';
+  }).join('');
+}
+function buildQuadLabels(){
+  TEAMS.forEach(function(t){
+    var q = elField.querySelector('.quad.'+t.corner);
+    if (q) q.style.background = t.color;
+    var c = CORNER[t.corner];
+    var lab = document.createElement('div');
+    lab.className = 'quadlabel';
+    lab.innerHTML = t.name + '<span class="n">'+t.blurb+'</span>';
+    lab.style.color = t.color;
+    lab.style.top    = (c[1] > 50 ? 'auto' : '14px');
+    lab.style.bottom = (c[1] > 50 ? '14px' : 'auto');
+    lab.style.right  = (c[0] > 50 ? '18px' : 'auto');
+    lab.style.left   = (c[0] > 50 ? 'auto' : '18px');
+    lab.style.textAlign = (c[0] > 50 ? 'right' : 'left');
+    elField.appendChild(lab);
+  });
+}
+function playUrl(){
+  return location.href.replace(/[^/]*$/,'') + 'play.html';
+}
+function drawQR(){
+  var url = playUrl();
+  document.getElementById('qrurl').textContent = url;
+  try {
+    new QRious({ element: document.getElementById('qr'), value: url, size: 440,
+                 background:'#fff', foreground:'#1d2430' });
+  } catch(e){
+    document.getElementById('qrurl').textContent = url + ' (קוד ה-QR לא נוצר)';
+  }
+}
+buildLobbyCards(); buildPullCards(); buildQuadLabels(); drawQR();
+
+/* ---------- Firebase ---------- */
+var firebaseConfig = {
+  apiKey: "AIzaSyAyE02oUmgIn2G6kkRWdNdqfrQi9rxEFC0",
+  authDomain: "erez-chevel-game.firebaseapp.com",
+  databaseURL: "https://erez-chevel-game-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "erez-chevel-game",
+  storageBucket: "erez-chevel-game.firebasestorage.app",
+  messagingSenderId: "299559856429",
+  appId: "1:299559856429:web:715fc939fbaf1c68758ba4"
+};
+var db = null, players = {}, gameState = { state:'lobby' }, serverOffset = 0;
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  db.ref('.info/serverTimeOffset').on('value', function(s){ serverOffset = s.val() || 0; });
+  db.ref('players').on('value', function(s){ players = s.val() || {}; onPlayers(); });
+  db.ref('game').on('value', function(s){ gameState = s.val() || { state:'lobby' }; onGame(); });
+} catch (e) {
+  console.error('Firebase לא עלה', e);
+  document.getElementById('qrurl').textContent = 'שגיאת חיבור למסד הנתונים';
+}
+function now(){ return Date.now() + serverOffset; }
+
+/* ---------- שחקנים ---------- */
+function playerList(){
+  return Object.keys(players).map(function(k){
+    var p = players[k] || {}; p.id = k; return p;
+  }).filter(function(p){ return typeof p.team === 'number' && TEAMS[p.team]; });
+}
+function onPlayers(){
+  var list = playerList();
+  TEAMS.forEach(function(t){
+    var mine = list.filter(function(p){ return p.team === t.id; });
+    var c = document.getElementById('cnt'+t.id), n = document.getElementById('nms'+t.id);
+    if (c) c.textContent = mine.length + (mine.length === 1 ? ' שחקן' : ' שחקנים');
+    if (n) n.textContent = mine.map(function(p){ return p.name; }).join(' · ');
+  });
+  var sb = document.getElementById('startBtn');
+  sb.disabled = list.length < 2 || gameState.state === 'running';
+  if (gameState.state === 'running'){ renderArena(); updateFeed(list); }
+}
+
+/* ---------- פיזיקה: מרכז המסה של ארבע המשיכות ---------- */
+function teamPulls(list){
+  return TEAMS.map(function(t){
+    var mine = list.filter(function(p){ return p.team === t.id; });
+    var sum = mine.reduce(function(a,p){ return a + (p.score||0); }, 0);
+    /* משיכה היא ממוצע לחבר ולא סכום, אחרת קבוצה גדולה מנצחת בזכות המניין */
+    return { team:t, members:mine, sum:sum, pull: mine.length ? sum / mine.length : 0 };
+  });
+}
+function ringTarget(pulls){
+  var vx = 0, vy = 0, total = 0;
+  pulls.forEach(function(tp){
+    var d = dirOf(tp.team.corner);
+    vx += tp.pull * d[0]; vy += tp.pull * d[1];
+    total += tp.pull;
+  });
+  /* החיכוך מונע מהתשובה הנכונה הראשונה במשחק להטיס את הטבעת לפינה */
+  var denom = total + PH.friction;
+  var k = PH.maxRadius * 100;
+  return [ 50 + (vx/denom)*k, 50 + (vy/denom)*k ];
+}
+var ringPos = [50,50], ringGoal = [50,50];
+function animate(){
+  ringPos[0] += (ringGoal[0]-ringPos[0]) * PH.ease;
+  ringPos[1] += (ringGoal[1]-ringPos[1]) * PH.ease;
+  elRing.style.left = ringPos[0] + '%';
+  elRing.style.top  = ringPos[1] + '%';
+  drawRopes();
+  placePawns();
+  requestAnimationFrame(animate);
+}
+function drawRopes(){
+  /* קודם החבלים, ומעליהם עוגן בכל פינה כדי שהחבל ייראה קשור ולא תלוי באוויר */
+  var ropes = TEAMS.map(function(t){
+    var c = CORNER[t.corner];
+    return '<line x1="'+c[0]+'%" y1="'+c[1]+'%" x2="'+ringPos[0]+'%" y2="'+ringPos[1]+'%" ' +
+           'stroke="'+t.color+'" stroke-width="7" stroke-linecap="round" opacity="0.8"/>';
+  });
+  var anchors = TEAMS.map(function(t){
+    var c = CORNER[t.corner];
+    return '<circle cx="'+c[0]+'%" cy="'+c[1]+'%" r="13" fill="'+t.color+'" stroke="#fff" stroke-width="4"/>';
+  });
+  elRopes.innerHTML = ropes.join('') + anchors.join('');
+}
+
+/* ---------- הדמויות על החבלים ---------- */
+var pawnLayout = [];
+function placePawns(){
+  pawnLayout.forEach(function(it){
+    var c = CORNER[it.corner];
+    var x = c[0] + (ringPos[0]-c[0]) * it.frac;
+    var y = c[1] + (ringPos[1]-c[1]) * it.frac;
+    /* היסט ניצב קטן כדי ששחקנים בעלי ניקוד דומה לא יסתירו זה את זה */
+    var nx = -(ringPos[1]-c[1]), ny = (ringPos[0]-c[0]);
+    var m = Math.hypot(nx,ny) || 1;
+    x += (nx/m) * it.side; y += (ny/m) * it.side;
+    it.el.style.left = x + '%';
+    it.el.style.top  = y + '%';
+  });
+}
+function renderArena(){
+  var list = playerList();
+  var pulls = teamPulls(list);
+  ringGoal = ringTarget(pulls);
+
+  var maxPull = Math.max.apply(null, pulls.map(function(p){ return p.pull; }).concat([1]));
+  pulls.forEach(function(tp){
+    var pp = document.getElementById('pp'+tp.team.id);
+    var pb = document.getElementById('pb'+tp.team.id);
+    var pm = document.getElementById('pm'+tp.team.id);
+    if (pp) pp.textContent = Math.round(tp.pull);
+    if (pb) pb.style.width = Math.round(100 * tp.pull / maxPull) + '%';
+    if (pm) pm.textContent = tp.members.length + ' שחקנים · ' + tp.sum + ' נקודות';
+  });
+
+  var seen = {};
+  pawnLayout = [];
+  pulls.forEach(function(tp){
+    var sorted = tp.members.slice().sort(function(a,b){ return (b.score||0)-(a.score||0); });
+    var best = Math.max(1, sorted.length ? (sorted[0].score||0) : 1);
+    sorted.forEach(function(p, i){
+      var el = document.getElementById('pawn-'+p.id);
+      if (!el){
+        el = document.createElement('div');
+        el.className = 'pawn'; el.id = 'pawn-'+p.id;
+        el.innerHTML = '<img alt=""><span class="nm"></span>';
+        elField.appendChild(el);
+      }
+      var img = el.querySelector('img');
+      var wanted = p.avatar || D.avatars[0].file;
+      if (img.getAttribute('src') !== wanted) img.setAttribute('src', wanted);
+      img.style.borderColor = tp.team.color;
+      var nm = el.querySelector('.nm');
+      nm.textContent = p.name;
+      nm.style.color = tp.team.color;
+      pawnLayout.push({
+        el: el, corner: tp.team.corner,
+        /* המוביל בקבוצה עוצר לפני הטבעת, אחרת ארבעת המובילים נערמים על אותה נקודה */
+        frac: 0.24 + 0.54 * ((p.score||0) / best),
+        side: (i % 2 ? 1 : -1) * Math.ceil(i/2) * 4.2
+      });
+      seen[p.id] = 1;
+    });
+  });
+  Array.prototype.forEach.call(elField.querySelectorAll('.pawn'), function(el){
+    if (!seen[el.id.replace('pawn-','')]) el.remove();
+  });
+
+  var leader = pulls.slice().sort(function(a,b){ return b.pull-a.pull; })[0];
+  var q = quadrantOf(ringGoal);
+  document.getElementById('lead').textContent = q
+    ? 'הטבעת בשטח ' + q.name
+    : 'הטבעת במרכז, אף קבוצה לא הכריעה' +
+      (leader && leader.pull ? ' (מובילה במשיכה: ' + leader.team.short + ')' : '');
+}
+function quadrantOf(pos){
+  var dx = pos[0]-50, dy = pos[1]-50;
+  if (Math.hypot(dx,dy) < PH.centerZone*100) return null;
+  var corner = (dy < 0 ? 'n' : 's') + (dx > 0 ? 'e' : 'w');
+  return TEAMS.filter(function(t){ return t.corner === corner; })[0] || null;
+}
+
+/* ---------- פיד התשובות ---------- */
+var feedSeen = {};
+function updateFeed(list){
+  if (gameState.state !== 'running') return;
+  list.forEach(function(p){
+    if (!p.lastAt || feedSeen[p.id] === p.lastAt) return;
+    feedSeen[p.id] = p.lastAt;
+    var t = TEAMS[p.team];
+    var line = document.createElement('div');
+    line.innerHTML = '<b style="color:'+t.color+'">'+p.name+'</b> ' +
+      (p.lastOk
+        ? 'ענה נכון על ' + (p.lastQ || '') + ' <b>+' + (p.lastPts||0) + '</b>'
+        : '<span class="miss">טעה ב' + (p.lastQ || '') + '</span>');
+    elFeed.insertBefore(line, elFeed.firstChild);
+  });
+  while (elFeed.childNodes.length > 14) elFeed.removeChild(elFeed.lastChild);
+}
+
+/* ---------- מעבר בין מסכים ושעון ---------- */
+function show(id){
+  ['lobby','arena','final'].forEach(function(s){
+    document.getElementById(s).classList.toggle('on', s === id);
+  });
+}
+function onGame(){
+  if (gameState.state === 'running'){ show('arena'); renderArena(); }
+  else if (gameState.state === 'finished'){ show('final'); renderFinal(); }
+  else { show('lobby'); }
+}
+setInterval(function(){
+  if (gameState.state !== 'running' || !gameState.endsAt) return;
+  var left = Math.max(0, Math.round((gameState.endsAt - now())/1000));
+  var el = document.getElementById('clock');
+  el.textContent = String(Math.floor(left/60)).padStart(2,'0') + ':' + String(left%60).padStart(2,'0');
+  el.classList.toggle('low', left <= 30);
+  if (left <= 0 && db) db.ref('game').update({ state:'finished', finishedAt: now() });
+}, 250);
+
+/* ---------- מסך הסיום ---------- */
+function renderFinal(){
+  var list = playerList();
+  var pulls = teamPulls(list).sort(function(a,b){ return b.pull-a.pull; });
+  var q = quadrantOf(ringGoal);
+  var winner = q || pulls[0].team;
+  document.getElementById('winTitle').textContent = winner.name + ' מושכים חזק יותר';
+  document.getElementById('winSub').textContent = q
+    ? 'הטבעת נעצרה בשטח של ' + winner.name
+    : 'הטבעת נשארה במרכז, ולכן ההכרעה לפי המשיכה הממוצעת';
+
+  document.getElementById('finalTeams').innerHTML =
+    '<tr><th>קבוצה</th><th>משיכה (ממוצע לחבר)</th><th>נקודות</th><th>שחקנים</th></tr>' +
+    pulls.map(function(tp){
+      return '<tr><td style="color:'+tp.team.color+';font-weight:700">'+tp.team.name+'</td>' +
+        '<td>'+Math.round(tp.pull)+'</td><td>'+tp.sum+'</td><td>'+tp.members.length+'</td></tr>';
+    }).join('');
+
+  var top = list.slice().sort(function(a,b){ return (b.score||0)-(a.score||0); }).slice(0,8);
+  var medals = ['🥇','🥈','🥉'];
+  document.getElementById('finalPlayers').innerHTML =
+    '<tr><th></th><th>שחקן</th><th>קבוצה</th><th>נקודות</th><th>נכונות</th></tr>' +
+    top.map(function(p,i){
+      return '<tr><td class="medal">'+(medals[i]||(i+1))+'</td><td>'+p.name+'</td>' +
+        '<td style="color:'+TEAMS[p.team].color+'">'+TEAMS[p.team].short+'</td>' +
+        '<td>'+(p.score||0)+'</td><td>'+(p.correct||0)+'</td></tr>';
+    }).join('');
+}
+
+/* ---------- כפתורים ---------- */
+document.getElementById('startBtn').onclick = function(){
+  if (!db) return;
+  var dur = parseInt(document.getElementById('dur').value, 10);
+  var t = now();
+  var updates = {};
+  playerList().forEach(function(p){
+    updates['players/'+p.id+'/score'] = 0;
+    updates['players/'+p.id+'/correct'] = 0;
+    updates['players/'+p.id+'/wrong'] = 0;
+    updates['players/'+p.id+'/lastAt'] = null;
+  });
+  elFeed.innerHTML = ''; feedSeen = {};
+  ringPos = [50,50]; ringGoal = [50,50];
+  db.ref().update(updates).then(function(){
+    return db.ref('game').set({ state:'running', startedAt:t, durationSec:dur, endsAt: t + dur*1000 });
+  });
+};
+document.getElementById('stopBtn').onclick = function(){
+  if (db) db.ref('game').update({ state:'finished', finishedAt: now() });
+};
+document.getElementById('againBtn').onclick = function(){
+  if (db) db.ref('game').set({ state:'lobby' });
+};
+document.getElementById('resetBtn').onclick = function(){
+  if (!db) return;
+  if (!confirm('לאפס את כל השחקנים ולהתחיל מחדש?')) return;
+  db.ref('players').remove();
+  db.ref('teamCounts').remove();
+  db.ref('game').set({ state:'lobby' });
+  Array.prototype.forEach.call(elField.querySelectorAll('.pawn'), function(el){ el.remove(); });
+  elFeed.innerHTML = ''; feedSeen = {};
+  ringPos = [50,50]; ringGoal = [50,50];
+};
+
+animate();
+</script>
+</body>
+</html>
