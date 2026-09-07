@@ -29,7 +29,8 @@
   .avatars{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
   .av{background:#fff;border:3px solid var(--line);border-radius:12px;padding:5px;cursor:pointer}
   .av.sel{border-color:var(--ink)}
-  .av img{width:100%;display:block}
+  /* עיגול כבר בבורר, כדי שמה שבוחרים יהיה מה שרואים על החבל */
+  .av img{width:100%;display:block;border-radius:50%}
   .av span{display:block;text-align:center;font-size:11px;color:var(--muted);margin-top:2px}
 
   .teamband{
