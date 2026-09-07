@@ -46,7 +46,7 @@ const avatars = [
   { id: 'a5', file: 'images/avatar5.svg', label: 'החקלאי' },
   { id: 'a6', file: 'images/avatar6.svg', label: 'הפעילה' },
   { id: 'a7', file: 'images/avatar7.svg', label: 'היזם' },
-  { id: 'a8', file: 'images/avatar8.svg', label: 'המודד' }
+  { id: 'a8', file: 'images/avatar8.svg', label: 'המודדת' }
 ];
 
 const out = `// נוצר אוטומטית על ידי tools/build-data.mjs. לא לערוך ידנית.

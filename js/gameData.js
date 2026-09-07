@@ -91,7 +91,7 @@ window.gameData = {
     {
       "id": "a8",
       "file": "images/avatar8.svg",
-      "label": "המודד"
+      "label": "המודדת"
     }
   ],
   "questions": [

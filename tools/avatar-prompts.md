@@ -60,7 +60,7 @@ A woman in her twenties, environmental activist. Auburn hair in a loose bun, sma
 A man in his thirties, infrastructure developer. Neat dark hair, light beard, charcoal shirt with rolled sleeves visible at the shoulder.
 ```
 
-`avatar8.svg` - **המודד**
+`avatar8.svg` - **המודדת**
 ```
 A woman in her forties, land surveyor. Hair under a cap, high-visibility orange vest over a grey shirt. Practical no-nonsense expression.
 ```
