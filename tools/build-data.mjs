@@ -39,14 +39,14 @@ const teams = [
 ];
 
 const avatars = [
-  { id: 'a1', file: 'images/avatar1.svg', label: 'המתכננת' },
-  { id: 'a2', file: 'images/avatar2.svg', label: 'המהנדס' },
-  { id: 'a3', file: 'images/avatar3.svg', label: 'ראש העיר' },
-  { id: 'a4', file: 'images/avatar4.svg', label: 'הפקידה' },
-  { id: 'a5', file: 'images/avatar5.svg', label: 'החקלאי' },
-  { id: 'a6', file: 'images/avatar6.svg', label: 'הפעילה' },
-  { id: 'a7', file: 'images/avatar7.svg', label: 'היזם' },
-  { id: 'a8', file: 'images/avatar8.svg', label: 'המודדת' }
+  { id: 'a1', file: 'images/avatar1.jpg', label: 'המתכננת' },
+  { id: 'a2', file: 'images/avatar2.jpg', label: 'המהנדס' },
+  { id: 'a3', file: 'images/avatar3.jpg', label: 'ראש העיר' },
+  { id: 'a4', file: 'images/avatar4.jpg', label: 'הפקידה' },
+  { id: 'a5', file: 'images/avatar5.jpg', label: 'החקלאי' },
+  { id: 'a6', file: 'images/avatar6.jpg', label: 'הפעילה' },
+  { id: 'a7', file: 'images/avatar7.jpg', label: 'היזם' },
+  { id: 'a8', file: 'images/avatar8.jpg', label: 'המודדת' }
 ];
 
 const out = `// נוצר אוטומטית על ידי tools/build-data.mjs. לא לערוך ידנית.

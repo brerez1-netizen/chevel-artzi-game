@@ -55,42 +55,42 @@ window.gameData = {
   "avatars": [
     {
       "id": "a1",
-      "file": "images/avatar1.svg",
+      "file": "images/avatar1.jpg",
       "label": "המתכננת"
     },
     {
       "id": "a2",
-      "file": "images/avatar2.svg",
+      "file": "images/avatar2.jpg",
       "label": "המהנדס"
     },
     {
       "id": "a3",
-      "file": "images/avatar3.svg",
+      "file": "images/avatar3.jpg",
       "label": "ראש העיר"
     },
     {
       "id": "a4",
-      "file": "images/avatar4.svg",
+      "file": "images/avatar4.jpg",
       "label": "הפקידה"
     },
     {
       "id": "a5",
-      "file": "images/avatar5.svg",
+      "file": "images/avatar5.jpg",
       "label": "החקלאי"
     },
     {
       "id": "a6",
-      "file": "images/avatar6.svg",
+      "file": "images/avatar6.jpg",
       "label": "הפעילה"
     },
     {
       "id": "a7",
-      "file": "images/avatar7.svg",
+      "file": "images/avatar7.jpg",
       "label": "היזם"
     },
     {
       "id": "a8",
-      "file": "images/avatar8.svg",
+      "file": "images/avatar8.jpg",
       "label": "המודדת"
     }
   ],
